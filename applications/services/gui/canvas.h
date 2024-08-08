@@ -233,6 +233,14 @@ void canvas_draw_bitmap(
     size_t height,
     const uint8_t* compressed_bitmap_data);
 
+void canvas_draw_raw_bitmap(
+    Canvas* canvas,
+    int32_t x,
+    int32_t y,
+    size_t width,
+    size_t height,
+    const uint8_t* bitmap_data);
+
 /** Draw icon at position defined by x,y with rotation and flip.
  *
  * @param      canvas    Canvas instance
