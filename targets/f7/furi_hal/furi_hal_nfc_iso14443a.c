@@ -41,12 +41,22 @@ static FuriHalNfcError furi_hal_nfc_iso14443a_common_init(FuriHalSpiBusHandle* h
 }
 
 static FuriHalNfcError furi_hal_nfc_iso14443a_poller_init(FuriHalSpiBusHandle* handle) {
+    // Reset chip to default state
+    st25r3916_direct_cmd(handle, ST25R3916_CMD_SET_DEFAULT);
+
+    //Turn on clock, enable rx, tx and auto field
+    st25r3916_write_reg(
+        handle,
+        ST25R3916_REG_OP_CONTROL,
+        ST25R3916_REG_OP_CONTROL_en | ST25R3916_REG_OP_CONTROL_rx_en |
+            ST25R3916_REG_OP_CONTROL_tx_en | ST25R3916_REG_OP_CONTROL_en_fd_auto_efd);
+
     // Enable ISO14443A mode, OOK modulation
-    st25r3916_change_reg_bits(
+    st25r3916_write_reg(
         handle,
         ST25R3916_REG_MODE,
-        ST25R3916_REG_MODE_om_mask | ST25R3916_REG_MODE_tr_am,
-        ST25R3916_REG_MODE_om_iso14443a | ST25R3916_REG_MODE_tr_am_ook);
+        ST25R3916_REG_MODE_targ_init | ST25R3916_REG_MODE_om_iso14443a |
+            ST25R3916_REG_MODE_tr_am_ook);
 
     // Overshoot protection - is this necessary here?
     st25r3916_change_reg_bits(handle, ST25R3916_REG_OVERSHOOT_CONF1, 0xff, 0x40);
