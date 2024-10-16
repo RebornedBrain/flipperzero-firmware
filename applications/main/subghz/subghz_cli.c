@@ -3,17 +3,19 @@
 #include <furi.h>
 #include <furi_hal.h>
 
-#include <lib/toolbox/args.h>
-#include <lib/subghz/subghz_keystore.h>
+#include <applications/drivers/subghz/cc1101_ext/cc1101_ext_interconnect.h>
 
+#include <lib/subghz/subghz_keystore.h>
 #include <lib/subghz/receiver.h>
 #include <lib/subghz/transmitter.h>
 #include <lib/subghz/subghz_file_encoder_worker.h>
 #include <lib/subghz/protocols/protocol_items.h>
-#include <applications/drivers/subghz/cc1101_ext/cc1101_ext_interconnect.h>
 #include <lib/subghz/devices/cc1101_int/cc1101_int_interconnect.h>
 #include <lib/subghz/devices/devices.h>
 #include <lib/subghz/devices/cc1101_configs.h>
+
+#include <lib/toolbox/args.h>
+#include <lib/toolbox/strint.h>
 
 #include "helpers/subghz_chat.h"
 
@@ -71,9 +73,8 @@ void subghz_cli_command_tx_carrier(Cli* cli, FuriString* args, void* context) {
     uint32_t frequency = 433920000;
 
     if(furi_string_size(args)) {
-        int ret = sscanf(furi_string_get_cstr(args), "%lu", &frequency);
-        if(ret != 1) {
-            printf("sscanf returned %d, frequency: %lu\r\n", ret, frequency);
+        if(strint_to_uint32(furi_string_get_cstr(args), NULL, &frequency, 10) !=
+           StrintParseNoError) {
             cli_print_usage("subghz tx_carrier", "<Frequency: in Hz>", furi_string_get_cstr(args));
             return;
         }
@@ -115,9 +116,8 @@ void subghz_cli_command_rx_carrier(Cli* cli, FuriString* args, void* context) {
     uint32_t frequency = 433920000;
 
     if(furi_string_size(args)) {
-        int ret = sscanf(furi_string_get_cstr(args), "%lu", &frequency);
-        if(ret != 1) {
-            printf("sscanf returned %d, frequency: %lu\r\n", ret, frequency);
+        if(strint_to_uint32(furi_string_get_cstr(args), NULL, &frequency, 10) !=
+           StrintParseNoError) {
             cli_print_usage("subghz rx_carrier", "<Frequency: in Hz>", furi_string_get_cstr(args));
             return;
         }
@@ -181,23 +181,14 @@ void subghz_cli_command_tx(Cli* cli, FuriString* args, void* context) {
     uint32_t device_ind = 0; // 0 - CC1101_INT, 1 - CC1101_EXT
 
     if(furi_string_size(args)) {
-        int ret = sscanf(
-            furi_string_get_cstr(args),
-            "%lx %lu %lu %lu %lu",
-            &key,
-            &frequency,
-            &te,
-            &repeat,
-            &device_ind);
-        if(ret != 5) {
-            printf(
-                "sscanf returned %d, key: %lx, frequency: %lu, te: %lu, repeat: %lu, device: %lu\r\n ",
-                ret,
-                key,
-                frequency,
-                te,
-                repeat,
-                device_ind);
+        char* args_cstr = (char*)furi_string_get_cstr(args);
+        StrintParseError parse_err = StrintParseNoError;
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &key, 16);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &frequency, 10);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &te, 10);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &repeat, 10);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &device_ind, 10);
+        if(parse_err) {
             cli_print_usage(
                 "subghz tx",
                 "<3 Byte Key: in hex> <Frequency: in Hz> <Te us> <Repeat count> <Device: 0 - CC1101_INT, 1 - CC1101_EXT>",
@@ -314,10 +305,11 @@ void subghz_cli_command_rx(Cli* cli, FuriString* args, void* context) {
     uint32_t device_ind = 0; // 0 - CC1101_INT, 1 - CC1101_EXT
 
     if(furi_string_size(args)) {
-        int ret = sscanf(furi_string_get_cstr(args), "%lu %lu", &frequency, &device_ind);
-        if(ret != 2) {
-            printf(
-                "sscanf returned %d, frequency: %lu device: %lu\r\n", ret, frequency, device_ind);
+        char* args_cstr = (char*)furi_string_get_cstr(args);
+        StrintParseError parse_err = StrintParseNoError;
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &frequency, 10);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &device_ind, 10);
+        if(parse_err) {
             cli_print_usage(
                 "subghz rx",
                 "<Frequency: in Hz> <Device: 0 - CC1101_INT, 1 - CC1101_EXT>",
@@ -401,9 +393,8 @@ void subghz_cli_command_rx_raw(Cli* cli, FuriString* args, void* context) {
     uint32_t frequency = 433920000;
 
     if(furi_string_size(args)) {
-        int ret = sscanf(furi_string_get_cstr(args), "%lu", &frequency);
-        if(ret != 1) {
-            printf("sscanf returned %d, frequency: %lu\r\n", ret, frequency);
+        if(strint_to_uint32(furi_string_get_cstr(args), NULL, &frequency, 10) !=
+           StrintParseNoError) {
             cli_print_usage("subghz rx", "<Frequency: in Hz>", furi_string_get_cstr(args));
             return;
         }
@@ -622,9 +613,11 @@ void subghz_cli_command_tx_from_file(Cli* cli, FuriString* args, void* context) 
         }
 
         if(furi_string_size(args)) {
-            int ret = sscanf(furi_string_get_cstr(args), "%lu %lu", &repeat, &device_ind);
-            if(ret != 2) {
-                printf("sscanf returned %d, repeat: %lu device: %lu\r\n", ret, repeat, device_ind);
+            char* args_cstr = (char*)furi_string_get_cstr(args);
+            StrintParseError parse_err = StrintParseNoError;
+            parse_err |= strint_to_uint32(args_cstr, &args_cstr, &frequency, 10);
+            parse_err |= strint_to_uint32(args_cstr, &args_cstr, &device_ind, 10);
+            if(parse_err) {
                 cli_print_usage(
                     "subghz tx_from_file:",
                     "<file_name: path_file> <Repeat count> <Device: 0 - CC1101_INT, 1 - CC1101_EXT>",
@@ -936,10 +929,11 @@ static void subghz_cli_command_chat(Cli* cli, FuriString* args) {
     uint32_t device_ind = 0; // 0 - CC1101_INT, 1 - CC1101_EXT
 
     if(furi_string_size(args)) {
-        int ret = sscanf(furi_string_get_cstr(args), "%lu %lu", &frequency, &device_ind);
-        if(ret != 2) {
-            printf("sscanf returned %d, Frequency: %lu\r\n", ret, frequency);
-            printf("sscanf returned %d, Device: %lu\r\n", ret, device_ind);
+        char* args_cstr = (char*)furi_string_get_cstr(args);
+        StrintParseError parse_err = StrintParseNoError;
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &frequency, 10);
+        parse_err |= strint_to_uint32(args_cstr, &args_cstr, &device_ind, 10);
+        if(parse_err) {
             cli_print_usage(
                 "subghz chat",
                 "<Frequency: in Hz> <Device: 0 - CC1101_INT, 1 - CC1101_EXT>",
@@ -1005,13 +999,12 @@ static void subghz_cli_command_chat(Cli* cli, FuriString* args) {
         chat_event = subghz_chat_worker_get_event_chat(subghz_chat);
         switch(chat_event.event) {
         case SubGhzChatEventInputData:
-            if(chat_event.c == CliSymbolAsciiETX) {
+            if(chat_event.c == CliKeyETX) {
                 printf("\r\n");
                 chat_event.event = SubGhzChatEventUserExit;
                 subghz_chat_worker_put_event_chat(subghz_chat, &chat_event);
                 break;
-            } else if(
-                (chat_event.c == CliSymbolAsciiBackspace) || (chat_event.c == CliSymbolAsciiDel)) {
+            } else if((chat_event.c == CliKeyBackspace) || (chat_event.c == CliKeyDEL)) {
                 size_t len = furi_string_utf8_length(input);
                 if(len > furi_string_utf8_length(name)) {
                     printf("%s", "\e[D\e[1P");
@@ -1033,7 +1026,7 @@ static void subghz_cli_command_chat(Cli* cli, FuriString* args) {
                     }
                     furi_string_set(input, sysmsg);
                 }
-            } else if(chat_event.c == CliSymbolAsciiCR) {
+            } else if(chat_event.c == CliKeyCR) {
                 printf("\r\n");
                 furi_string_push_back(input, '\r');
                 furi_string_push_back(input, '\n');
@@ -1047,7 +1040,7 @@ static void subghz_cli_command_chat(Cli* cli, FuriString* args) {
                 furi_string_printf(input, "%s", furi_string_get_cstr(name));
                 printf("%s", furi_string_get_cstr(input));
                 fflush(stdout);
-            } else if(chat_event.c == CliSymbolAsciiLF) {
+            } else if(chat_event.c == CliKeyLF) {
                 //cut out the symbol \n
             } else {
                 putc(chat_event.c, stdout);
